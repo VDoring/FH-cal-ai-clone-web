@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Camera, Upload, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { Loading } from '@/components/ui/loading'
+import { useImageUpload } from '@/hooks/use-image-upload'
 import Image from 'next/image'
 
 export default function UploadPage() {
@@ -18,9 +19,9 @@ export default function UploadPage() {
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
-  const [errorMessage, setErrorMessage] = useState('')
+  
+  // n8n 웹훅 연동을 위한 훅 사용
+  const { loading, error, progress, stage, result, processImage, reset: resetUpload } = useImageUpload()
 
   // 파일 선택 핸들러
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,8 +30,7 @@ export default function UploadPage() {
       setSelectedFile(file)
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
-      setUploadStatus('idle')
-      setErrorMessage('')
+      resetUpload() // 업로드 상태 초기화
     }
   }
 
@@ -39,31 +39,17 @@ export default function UploadPage() {
     fileInputRef.current?.click()
   }
 
-  // 업로드 처리 (임시 구현)
+  // n8n 웹훅을 통한 업로드 처리
   const handleUpload = async () => {
     if (!selectedFile || !user) return
 
-    setIsUploading(true)
-    setUploadStatus('uploading')
-
-    try {
-      // 실제로는 n8n 웹훅으로 전송하는 로직이 들어갈 예정
-      // 지금은 임시로 3초 후 성공 처리
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      
-      // 임시 성공 처리
-      setUploadStatus('success')
-      
-      // 2초 후 대시보드로 이동
+    const analysisResult = await processImage(selectedFile)
+    
+    if (analysisResult) {
+      // 성공 시 2초 후 대시보드로 이동
       setTimeout(() => {
         router.push('/dashboard')
       }, 2000)
-      
-    } catch (error) {
-      setUploadStatus('error')
-      setErrorMessage('업로드 중 오류가 발생했습니다. 다시 시도해주세요.')
-    } finally {
-      setIsUploading(false)
     }
   }
 
@@ -71,8 +57,7 @@ export default function UploadPage() {
   const handleReset = () => {
     setSelectedFile(null)
     setPreviewUrl('')
-    setUploadStatus('idle')
-    setErrorMessage('')
+    resetUpload() // 업로드 상태도 초기화
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -156,12 +141,13 @@ export default function UploadPage() {
                 </div>
 
                 {/* 상태별 UI */}
-                {uploadStatus === 'idle' && (
+                {stage === 'idle' && (
                   <div className="space-y-3">
                     <Button 
                       onClick={handleUpload}
                       className="w-full h-12"
                       size="lg"
+                      disabled={loading}
                     >
                       <Upload className="w-5 h-5 mr-2" />
                       식단 기록하기
@@ -170,43 +156,48 @@ export default function UploadPage() {
                       variant="outline"
                       onClick={handleReset}
                       className="w-full"
+                      disabled={loading}
                     >
                       다른 사진 선택
                     </Button>
                   </div>
                 )}
 
-                {uploadStatus === 'uploading' && (
+                {(stage === 'analyzing' || loading) && (
                   <div className="text-center space-y-4">
                     <Loading size="lg" />
                     <div className="space-y-2">
                       <h3 className="font-medium text-gray-900">AI가 음식을 분석하고 있습니다</h3>
                       <p className="text-sm text-gray-600">
+                        {progress > 0 && `${progress}% 완료`}
+                      </p>
+                      <p className="text-xs text-gray-500">
                         잠시만 기다려주세요...
                       </p>
                     </div>
                   </div>
                 )}
 
-                {uploadStatus === 'success' && (
+                {stage === 'complete' && result && (
                   <div className="text-center space-y-4">
                     <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
                     <div className="space-y-2">
                       <h3 className="font-medium text-gray-900">기록 완료!</h3>
-                      <p className="text-sm text-gray-600">
-                        식단이 성공적으로 기록되었습니다.<br />
-                        대시보드로 이동합니다...
-                      </p>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>총 {result.summary.totalCalories}kcal</p>
+                        <p>{result.items.length}개 음식 인식</p>
+                        <p>대시보드로 이동합니다...</p>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {uploadStatus === 'error' && (
+                {error && stage === 'idle' && (
                   <div className="text-center space-y-4">
                     <AlertCircle className="w-16 h-16 text-red-500 mx-auto" />
                     <div className="space-y-2">
-                      <h3 className="font-medium text-gray-900">업로드 실패</h3>
-                      <p className="text-sm text-gray-600">{errorMessage}</p>
+                      <h3 className="font-medium text-gray-900">분석 실패</h3>
+                      <p className="text-sm text-gray-600">{error}</p>
                     </div>
                     <div className="space-y-2">
                       <Button onClick={handleUpload} className="w-full">
