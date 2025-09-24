@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 }
 
 // 특정 사용자에게 메시지 전송하는 유틸리티 함수
-export function sendSSEMessage(userId: string, data: any) {
+export function sendSSEMessage(userId: string, data: unknown) {
   const controller = connections.get(userId)
   console.log(`SSE 메시지 전송 시도: userId=${userId}, 연결됨=${!!controller}`)
   

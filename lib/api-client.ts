@@ -17,12 +17,14 @@ export async function createUser(username: string, fullName?: string) {
   return response.json()
 }
 
+import { type FoodItem } from './database'
+
 // 음식 로그 관련 API
 export async function saveFoodLogAPI(data: {
   userId: string
   imageUrl: string
   mealType: string
-  items: any[]
+  items: FoodItem[]
   summary: {
     totalCalories: number
     totalCarbohydrates: { value: number; unit: string }

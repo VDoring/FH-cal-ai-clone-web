@@ -24,7 +24,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1">
                 <h2 className="text-xl font-semibold text-gray-900">{user?.name}</h2>
-                <p className="text-gray-600">{user?.email}</p>
+                <p className="text-gray-600">@{user?.username}</p>
                 <div className="mt-2 text-sm text-gray-500">
                   🎯 목표 칼로리: 2,000kcal/일
                 </div>

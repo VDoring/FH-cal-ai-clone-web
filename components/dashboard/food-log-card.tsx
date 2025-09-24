@@ -18,12 +18,14 @@ function getMealTypeLabel(mealType: string) {
   return labels[mealType] || mealType
 }
 
+import { type FoodItem } from '@/lib/database'
+
 interface FoodLogCardProps {
   log: {
     id: string
-    image_url: string
+    image_url: string | null
     meal_type: string
-    food_items: any[]
+    food_items: FoodItem[]
     total_calories: number
     confidence_score: number
     created_at: string

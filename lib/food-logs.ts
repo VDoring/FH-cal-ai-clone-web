@@ -53,7 +53,18 @@ export async function saveFoodLog(data: {
     if (result.changes > 0) {
       // 저장된 데이터 조회
       const selectStmt = db.prepare('SELECT * FROM food_logs WHERE id = ?')
-      const savedRow = selectStmt.get(id) as any
+      const savedRow = selectStmt.get(id) as {
+        id: string
+        user_id: string
+        image_url: string
+        meal_type: string
+        food_items: string
+        total_calories: number
+        total_nutrients: string
+        confidence_score: number
+        created_at: string
+        updated_at: string
+      }
       
       if (savedRow) {
         const savedData: FoodLog = {
@@ -96,7 +107,7 @@ export async function getFoodLogs(
     const db = getDatabase()
     
     let sql = 'SELECT * FROM food_logs WHERE user_id = ?'
-    const params: any[] = [userId]
+    const params: (string | number)[] = [userId]
 
     // 날짜 필터링
     if (options?.date) {
@@ -120,7 +131,18 @@ export async function getFoodLogs(
     }
 
     const stmt = db.prepare(sql)
-    const rows = stmt.all(...params) as any[]
+    const rows = stmt.all(...params) as {
+      id: string
+      user_id: string
+      image_url: string
+      meal_type: string
+      food_items: string
+      total_calories: number
+      total_nutrients: string
+      confidence_score: number
+      created_at: string
+      updated_at: string
+    }[]
 
     const foodLogs: FoodLog[] = rows.map(row => ({
       id: row.id,
@@ -181,7 +203,10 @@ export async function getDailyCalorySummary(
       WHERE user_id = ? AND date(created_at) = ?
     `)
     
-    const rows = stmt.all(userId, date) as any[]
+    const rows = stmt.all(userId, date) as {
+      meal_type: string
+      total_calories: number
+    }[]
 
     const totalCalories = rows.reduce((sum, log) => sum + log.total_calories, 0)
     const mealBreakdown = rows.reduce((acc, log) => {

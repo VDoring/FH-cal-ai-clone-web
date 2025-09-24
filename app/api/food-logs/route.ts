@@ -41,7 +41,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const options: any = {}
+    const options: {
+      date?: string
+      mealType?: string
+      limit?: number
+    } = {}
     if (date) options.date = date
     if (mealType) options.mealType = mealType
     if (limit) options.limit = parseInt(limit)

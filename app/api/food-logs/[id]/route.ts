@@ -4,7 +4,7 @@ import { deleteFoodLog } from '@/lib/food-logs'
 // 음식 로그 삭제
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url)
@@ -17,7 +17,8 @@ export async function DELETE(
       )
     }
 
-    const result = await deleteFoodLog(params.id, userId)
+    const { id } = await params
+    const result = await deleteFoodLog(id, userId)
     
     if (result.success) {
       return NextResponse.json(result)

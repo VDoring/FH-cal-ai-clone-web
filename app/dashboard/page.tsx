@@ -15,20 +15,7 @@ import { Plus, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { Loading } from '@/components/ui/loading'
 import { fetchFoodLogs, fetchDailyCalorySummary } from '@/lib/api-client'
-
-// 타입 정의
-interface FoodLog {
-  id: string
-  user_id: string
-  image_url: string
-  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
-  food_items: any[]
-  total_calories: number
-  total_nutrients: any
-  confidence_score: number
-  created_at: string
-  updated_at: string
-}
+import { type FoodLog } from '@/lib/database'
 
 export default function DashboardPage() {
   const router = useRouter()

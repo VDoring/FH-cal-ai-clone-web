@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { params: string[] } }
+  { params }: { params: Promise<{ params: string[] }> }
 ) {
-  const [width = '400', height = '300'] = params.params
+  const { params: pathParams } = await params
+  const [width = '400', height = '300'] = pathParams
   
   // 간단한 SVG 플레이스홀더 생성
   const svg = `
