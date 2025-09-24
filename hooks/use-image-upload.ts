@@ -66,17 +66,53 @@ export function useImageUpload() {
         throw new Error(analysisResult.error?.message || 'AI 분석 실패')
       }
 
-      // 완료
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        progress: 100,
-        stage: 'complete',
-        result: analysisResult.data || null
-      }))
+      // 분석 완료 여부 확인 - n8n에서 즉시 결과를 반환한 경우
+      const responseData = analysisResult.data as any
+      if (responseData?.status === 'complete') {
+        // 즉시 완료된 경우 - 실제 분석 결과 사용
+        setState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          progress: 100,
+          stage: 'complete',
+          result: { 
+            items: [], // 실제 데이터는 데이터베이스에서 조회
+            summary: { totalCalories: responseData.totalCalories || 0, totalCarbohydrates: { value: 0, unit: 'g' }, totalProtein: { value: 0, unit: 'g' }, totalFat: { value: 0, unit: 'g' } }, 
+            mealType: 'snack', 
+            imageUrl: '' 
+          }
+        }))
+        
+        console.log('음식 분석 즉시 완료됨:', analysisResult)
+        return { 
+          items: [], 
+          summary: { totalCalories: responseData.totalCalories || 0, totalCarbohydrates: { value: 0, unit: 'g' }, totalProtein: { value: 0, unit: 'g' }, totalFat: { value: 0, unit: 'g' } }, 
+          mealType: 'snack', 
+          imageUrl: '' 
+        }
+      } else {
+        // n8n에서 분석을 완료했으므로 즉시 완료 상태로 설정
+        setState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          progress: 100,
+          stage: 'complete',
+          result: { 
+            items: [], 
+            summary: { totalCalories: 0, totalCarbohydrates: { value: 0, unit: 'g' }, totalProtein: { value: 0, unit: 'g' }, totalFat: { value: 0, unit: 'g' } }, 
+            mealType: 'snack', 
+            imageUrl: '' 
+          }
+        }))
 
-      console.log('음식 분석 완료:', analysisResult.data)
-      return analysisResult.data || null
+        console.log('음식 분석 완료됨, 결과 표시:', analysisResult)
+        return { 
+          items: [], 
+          summary: { totalCalories: 0, totalCarbohydrates: { value: 0, unit: 'g' }, totalProtein: { value: 0, unit: 'g' }, totalFat: { value: 0, unit: 'g' } }, 
+          mealType: 'snack', 
+          imageUrl: '' 
+        }
+      }
     } catch (error) {
       console.error('이미지 처리 오류:', error)
       setState(prev => ({ 

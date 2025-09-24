@@ -14,97 +14,20 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Plus, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { Loading } from '@/components/ui/loading'
+import { fetchFoodLogs, fetchDailyCalorySummary } from '@/lib/api-client'
 
-// 임시 데모 데이터
-const generateDemoData = (selectedDate: Date) => {
-  const today = new Date()
-  const isToday = selectedDate.toDateString() === today.toDateString()
-  
-  // 오늘이 아니면 빈 데이터 반환
-  if (!isToday) {
-    return {
-      logs: [],
-      summary: { total: 0, breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
-    }
-  }
-
-  // 오늘 데이터만 임시로 제공
-  const demoLogs = [
-    {
-      id: 'demo-1',
-      image_url: '/api/placeholder/400/300',
-      meal_type: 'breakfast',
-      food_items: [
-        {
-          foodName: '토스트',
-          confidence: 0.95,
-          quantity: '2장',
-          calories: 180,
-          nutrients: {
-            carbohydrates: { value: 30, unit: 'g' },
-            protein: { value: 6, unit: 'g' },
-            fat: { value: 3, unit: 'g' }
-          }
-        },
-        {
-          foodName: '계란후라이',
-          confidence: 0.92,
-          quantity: '1개',
-          calories: 90,
-          nutrients: {
-            carbohydrates: { value: 1, unit: 'g' },
-            protein: { value: 7, unit: 'g' },
-            fat: { value: 7, unit: 'g' }
-          }
-        }
-      ],
-      total_calories: 270,
-      confidence_score: 0.93,
-      created_at: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 30).toISOString()
-    },
-    {
-      id: 'demo-2', 
-      image_url: '/api/placeholder/400/300',
-      meal_type: 'lunch',
-      food_items: [
-        {
-          foodName: '김치찌개',
-          confidence: 0.88,
-          quantity: '1인분',
-          calories: 320,
-          nutrients: {
-            carbohydrates: { value: 15, unit: 'g' },
-            protein: { value: 20, unit: 'g' },
-            fat: { value: 18, unit: 'g' }
-          }
-        },
-        {
-          foodName: '밥',
-          confidence: 0.96,
-          quantity: '1공기',
-          calories: 300,
-          nutrients: {
-            carbohydrates: { value: 65, unit: 'g' },
-            protein: { value: 6, unit: 'g' },
-            fat: { value: 1, unit: 'g' }
-          }
-        }
-      ],
-      total_calories: 620,
-      confidence_score: 0.92,
-      created_at: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 45).toISOString()
-    }
-  ]
-
-  const summary = {
-    total: demoLogs.reduce((sum, log) => sum + log.total_calories, 0),
-    breakfast: demoLogs.filter(log => log.meal_type === 'breakfast').reduce((sum, log) => sum + log.total_calories, 0),
-    lunch: demoLogs.filter(log => log.meal_type === 'lunch').reduce((sum, log) => sum + log.total_calories, 0), 
-    dinner: demoLogs.filter(log => log.meal_type === 'dinner').reduce((sum, log) => sum + log.total_calories, 0),
-    snack: demoLogs.filter(log => log.meal_type === 'snack').reduce((sum, log) => sum + log.total_calories, 0)
-  }
-
-  return { logs: demoLogs, summary }
+// 타입 정의
+interface FoodLog {
+  id: string
+  user_id: string
+  image_url: string
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  food_items: any[]
+  total_calories: number
+  total_nutrients: any
+  confidence_score: number
+  created_at: string
+  updated_at: string
 }
 
 export default function DashboardPage() {
@@ -113,29 +36,95 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [activeMeal, setActiveMeal] = useState('all')
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState({ logs: [], summary: { total: 0, breakfast: 0, lunch: 0, dinner: 0, snack: 0 } })
+  const [logs, setLogs] = useState<FoodLog[]>([])
+  const [summary, setSummary] = useState({ total: 0, breakfast: 0, lunch: 0, dinner: 0, snack: 0 })
 
-  // 데이터 로드 (임시 구현)
+  // 날짜를 YYYY-MM-DD 형식으로 변환
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0]
+  }
+
+  // 데이터 로드
   useEffect(() => {
     const loadData = async () => {
+      if (!user) return
+
       setLoading(true)
-      // 실제로는 Supabase에서 데이터를 가져올 예정
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 로딩 시뮬레이션
-      const demoData = generateDemoData(selectedDate)
-      setData(demoData)
-      setLoading(false)
+      try {
+        const dateStr = formatDate(selectedDate)
+        
+        // 음식 로그와 칼로리 요약을 병렬로 조회
+        const [logsResult, summaryResult] = await Promise.all([
+          fetchFoodLogs(user.id, { date: dateStr }),
+          fetchDailyCalorySummary(user.id, dateStr)
+        ])
+
+        if (logsResult.success) {
+          setLogs(logsResult.data || [])
+        } else {
+          console.error('음식 로그 조회 실패:', logsResult.error)
+          setLogs([])
+        }
+
+        if (summaryResult.success && summaryResult.data) {
+          setSummary({
+            total: summaryResult.data.totalCalories,
+            breakfast: summaryResult.data.mealBreakdown.breakfast || 0,
+            lunch: summaryResult.data.mealBreakdown.lunch || 0,
+            dinner: summaryResult.data.mealBreakdown.dinner || 0,
+            snack: summaryResult.data.mealBreakdown.snack || 0
+          })
+        } else {
+          setSummary({ total: 0, breakfast: 0, lunch: 0, dinner: 0, snack: 0 })
+        }
+      } catch (error) {
+        console.error('데이터 로드 오류:', error)
+        setLogs([])
+        setSummary({ total: 0, breakfast: 0, lunch: 0, dinner: 0, snack: 0 })
+      } finally {
+        setLoading(false)
+      }
     }
 
     loadData()
-  }, [selectedDate])
+  }, [selectedDate, user])
 
   // 선택된 끼니에 따라 로그 필터링
   const filteredLogs = activeMeal === 'all' 
-    ? data.logs 
-    : data.logs.filter(log => log.meal_type === activeMeal)
+    ? logs 
+    : logs.filter(log => log.meal_type === activeMeal)
 
-  const handleRefresh = () => {
-    window.location.reload()
+  // 데이터 새로고침
+  const handleRefresh = async () => {
+    if (!user) return
+
+    setLoading(true)
+    try {
+      const dateStr = formatDate(selectedDate)
+      
+      const [logsResult, summaryResult] = await Promise.all([
+        fetchFoodLogs(user.id, { date: dateStr }),
+        fetchDailyCalorySummary(user.id, dateStr)
+      ])
+
+      if (logsResult.success) {
+        setLogs(logsResult.data || [])
+      }
+
+      if (summaryResult.success && summaryResult.data) {
+        setSummary({
+          total: summaryResult.data.totalCalories,
+          breakfast: summaryResult.data.mealBreakdown.breakfast || 0,
+          lunch: summaryResult.data.mealBreakdown.lunch || 0,
+          dinner: summaryResult.data.mealBreakdown.dinner || 0,
+          snack: summaryResult.data.mealBreakdown.snack || 0
+        })
+      }
+    } catch (error) {
+      console.error('새로고침 오류:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (loading) {
@@ -181,16 +170,14 @@ export default function DashboardPage() {
         />
 
         {/* 칼로리 요약 */}
-        {data.summary && <CalorieSummary summary={data.summary} />}
+        <CalorieSummary summary={summary} />
 
         {/* 끼니 탭 */}
-        {data.summary && (
-          <MealTabs
-            summary={data.summary}
-            onMealChange={setActiveMeal}
-            activeMeal={activeMeal}
-          />
-        )}
+        <MealTabs
+          summary={summary}
+          onMealChange={setActiveMeal}
+          activeMeal={activeMeal}
+        />
 
         {/* 식단 기록 목록 */}
         <div className="space-y-4">

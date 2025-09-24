@@ -60,14 +60,23 @@ export function FoodLogCard({ log }: FoodLogCardProps) {
       
       <CardContent className="space-y-4">
         {/* 이미지 */}
-        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
-          <Image
-            src={log.image_url}
-            alt="식단 이미지"
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 50vw"
-          />
+        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+          {log.image_url && !log.image_url.startsWith('temp://') ? (
+            <Image
+              src={log.image_url}
+              alt="식단 이미지"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+          ) : (
+            <div className="text-center text-gray-500">
+              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                🍽️
+              </div>
+              <p className="text-sm">이미지 없음</p>
+            </div>
+          )}
         </div>
 
         {/* 음식 목록 */}

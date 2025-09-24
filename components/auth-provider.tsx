@@ -1,18 +1,19 @@
 'use client'
 
-import { createContext, useContext, ReactNode } from 'react'
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
+import { fetchUser, createUser } from '@/lib/api-client'
 
-// 임시 사용자 타입 정의
+// 클라이언트용 사용자 타입 정의
 interface User {
   id: string
-  email: string
+  username: string
   name: string
 }
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (username: string) => Promise<void>
   logout: () => void
 }
 
@@ -22,26 +23,53 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-// 로그인 bypass를 위한 임시 사용자 데이터
-const DEMO_USER: User = {
-  id: 'demo-user-123',
-  email: 'demo@example.com',
-  name: '데모 사용자'
-}
-
 export function AuthProvider({ children }: AuthProviderProps) {
-  // 로그인 기능 bypass - 항상 로그인된 상태로 처리
-  const user = DEMO_USER
-  const isLoading = false
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const login = async (email: string, password: string) => {
-    // 임시 구현 - 실제로는 아무것도 하지 않음
-    console.log('Login bypassed with:', { email, password })
+  // 컴포넌트 마운트 시 기본 사용자 생성/로그인
+  useEffect(() => {
+    const initUser = async () => {
+      setIsLoading(true)
+      try {
+        const result = await fetchUser()
+        if (result.success && result.data) {
+          setUser({
+            id: result.data.id,
+            username: result.data.username,
+            name: result.data.full_name || result.data.username
+          })
+        }
+      } catch (error) {
+        console.error('사용자 초기화 오류:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    initUser()
+  }, [])
+
+  const login = async (username: string) => {
+    setIsLoading(true)
+    try {
+      const result = await createUser(username, username)
+      if (result.success && result.data) {
+        setUser({
+          id: result.data.id,
+          username: result.data.username,
+          name: result.data.full_name || result.data.username
+        })
+      }
+    } catch (error) {
+      console.error('로그인 오류:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const logout = () => {
-    // 임시 구현 - 실제로는 아무것도 하지 않음
-    console.log('Logout bypassed')
+    setUser(null)
   }
 
   const value = {

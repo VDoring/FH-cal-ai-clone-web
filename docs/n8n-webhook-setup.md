@@ -122,12 +122,13 @@ curl -X POST https://vdoring.app.n8n.cloud/webhook/ea867a96-272a-451f-bf3a-32350
 
 ## 📝 n8n 워크플로우 권장 구조
 
+### 동기 처리 방식 (현재 설정)
 1. **Webhook Trigger** - 이미지 및 사용자 정보 수신
 2. **Code Node** - 끼니 타입 자동 분류
-3. **HTTP Request** - AI 음식 분석 API 호출
+3. **HTTP Request** - AI 음식 분석 API 호출 (2분 내 완료)
 4. **Supabase Storage** - 이미지 업로드
 5. **Supabase Database** - 분석 결과 저장
-6. **Response** - 결과 반환
+6. **Response** - 분석 결과 직접 반환
 
 ## 🚨 주의사항
 
@@ -137,7 +138,7 @@ curl -X POST https://vdoring.app.n8n.cloud/webhook/ea867a96-272a-451f-bf3a-32350
 - 이미지 파일 타입만 허용
 
 ### 성능
-- 타임아웃 설정 (30초)
+- 이미지 분석 타임아웃 설정 (2분)
 - 재시도 로직 (최대 3회)
 - 진행률 피드백 제공
 

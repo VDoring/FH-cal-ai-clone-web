@@ -21,7 +21,7 @@ export default function UploadPage() {
   const [previewUrl, setPreviewUrl] = useState<string>('')
   
   // n8n 웹훅 연동을 위한 훅 사용
-  const { loading, error, progress, stage, result, processImage, reset: resetUpload } = useImageUpload()
+  const { loading, error, progress, stage, processImage, reset: resetUpload } = useImageUpload()
 
   // 파일 선택 핸들러
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,7 +46,7 @@ export default function UploadPage() {
     const analysisResult = await processImage(selectedFile)
     
     if (analysisResult) {
-      // 성공 시 2초 후 대시보드로 이동
+      // 분석이 완료되면 2초 후 대시보드로 이동
       setTimeout(() => {
         router.push('/dashboard')
       }, 2000)
@@ -178,14 +178,13 @@ export default function UploadPage() {
                   </div>
                 )}
 
-                {stage === 'complete' && result && (
+                {stage === 'complete' && (
                   <div className="text-center space-y-4">
                     <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
                     <div className="space-y-2">
-                      <h3 className="font-medium text-gray-900">기록 완료!</h3>
+                      <h3 className="font-medium text-gray-900">분석 완료!</h3>
                       <div className="text-sm text-gray-600 space-y-1">
-                        <p>총 {result.summary.totalCalories}kcal</p>
-                        <p>{result.items.length}개 음식 인식</p>
+                        <p>음식 분석이 완료되었습니다.</p>
                         <p>대시보드로 이동합니다...</p>
                       </div>
                     </div>
