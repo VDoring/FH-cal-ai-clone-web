@@ -1,10 +1,24 @@
 import { getDatabase, type FoodLog, type FoodItem } from './database'
 import { v4 as uuidv4 } from 'uuid'
 
+// 데이터베이스 row 타입 정의
+interface FoodLogRow {
+  id: string
+  user_id: string
+  image_url: string | null
+  meal_type: string
+  food_items: string
+  total_calories: number
+  total_nutrients: string
+  confidence_score: number
+  created_at: string
+  updated_at: string
+}
+
 // 음식 분석 결과를 데이터베이스에 저장
 export async function saveFoodLog(data: {
   userId: string
-  imageUrl: string
+  imageUrl: string | null
   mealType: string
   items: FoodItem[]
   summary: {
@@ -23,7 +37,6 @@ export async function saveFoodLog(data: {
       : 0
 
     // 데이터베이스에 저장할 형태로 변환
-    const id = uuidv4()
     const totalNutrients = {
       carbohydrates: data.summary.totalCarbohydrates,
       protein: data.summary.totalProtein,
@@ -32,56 +45,48 @@ export async function saveFoodLog(data: {
       sodium: { value: 0, unit: 'mg' } // 기본값
     }
 
-    const insertStmt = db.prepare(`
-      INSERT INTO food_logs (
-        id, user_id, image_url, meal_type, food_items,
-        total_calories, total_nutrients, confidence_score
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
+    const logId = uuidv4()
+    const currentTime = new Date().toISOString()
 
-    const result = insertStmt.run(
-      id,
+    db.prepare(`
+      INSERT INTO food_logs (
+        id, user_id, image_url, meal_type, food_items, 
+        total_calories, total_nutrients, confidence_score, 
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      logId,
       data.userId,
       data.imageUrl,
       data.mealType,
       JSON.stringify(data.items),
       data.summary.totalCalories,
       JSON.stringify(totalNutrients),
-      avgConfidence
+      avgConfidence,
+      currentTime,
+      currentTime
     )
 
-    if (result.changes > 0) {
-      // 저장된 데이터 조회
-      const selectStmt = db.prepare('SELECT * FROM food_logs WHERE id = ?')
-      const savedRow = selectStmt.get(id) as {
-        id: string
-        user_id: string
-        image_url: string
-        meal_type: string
-        food_items: string
-        total_calories: number
-        total_nutrients: string
-        confidence_score: number
-        created_at: string
-        updated_at: string
+    // 저장된 데이터 조회
+    const savedRow = db.prepare(`
+      SELECT * FROM food_logs WHERE id = ?
+    `).get(logId) as FoodLogRow | undefined
+
+    if (savedRow) {
+      const savedData: FoodLog = {
+        id: savedRow.id,
+        user_id: savedRow.user_id,
+        image_url: savedRow.image_url,
+        meal_type: savedRow.meal_type as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+        food_items: JSON.parse(savedRow.food_items),
+        total_calories: savedRow.total_calories,
+        total_nutrients: JSON.parse(savedRow.total_nutrients),
+        confidence_score: savedRow.confidence_score,
+        created_at: savedRow.created_at,
+        updated_at: savedRow.updated_at
       }
       
-      if (savedRow) {
-        const savedData: FoodLog = {
-          id: savedRow.id,
-          user_id: savedRow.user_id,
-          image_url: savedRow.image_url,
-          meal_type: savedRow.meal_type as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-          food_items: JSON.parse(savedRow.food_items),
-          total_calories: savedRow.total_calories,
-          total_nutrients: JSON.parse(savedRow.total_nutrients),
-          confidence_score: savedRow.confidence_score,
-          created_at: savedRow.created_at,
-          updated_at: savedRow.updated_at
-        }
-        
-        return { success: true, data: savedData }
-      }
+      return { success: true, data: savedData }
     }
 
     return { success: false, error: '데이터 저장에 실패했습니다.' }
@@ -111,8 +116,10 @@ export async function getFoodLogs(
 
     // 날짜 필터링
     if (options?.date) {
-      sql += ' AND date(created_at) = ?'
-      params.push(options.date)
+      const startOfDay = `${options.date}T00:00:00.000Z`
+      const endOfDay = `${options.date}T23:59:59.999Z`
+      sql += ' AND created_at >= ? AND created_at <= ?'
+      params.push(startOfDay, endOfDay)
     }
 
     // 끼니 필터링
@@ -130,19 +137,7 @@ export async function getFoodLogs(
       params.push(options.limit)
     }
 
-    const stmt = db.prepare(sql)
-    const rows = stmt.all(...params) as {
-      id: string
-      user_id: string
-      image_url: string
-      meal_type: string
-      food_items: string
-      total_calories: number
-      total_nutrients: string
-      confidence_score: number
-      created_at: string
-      updated_at: string
-    }[]
+    const rows = db.prepare(sql).all(...params) as FoodLogRow[]
 
     const foodLogs: FoodLog[] = rows.map(row => ({
       id: row.id,
@@ -172,14 +167,19 @@ export async function deleteFoodLog(logId: string, userId: string): Promise<{ su
   try {
     const db = getDatabase()
     
-    const stmt = db.prepare('DELETE FROM food_logs WHERE id = ? AND user_id = ?')
-    const result = stmt.run(logId, userId)
+    const result = db.prepare(`
+      DELETE FROM food_logs 
+      WHERE id = ? AND user_id = ?
+    `).run(logId, userId)
 
-    if (result.changes > 0) {
-      return { success: true }
-    } else {
-      return { success: false, error: '삭제할 음식 로그를 찾을 수 없습니다.' }
+    if (result.changes === 0) {
+      return { 
+        success: false, 
+        error: '삭제할 음식 로그를 찾을 수 없습니다.' 
+      }
     }
+
+    return { success: true }
   } catch (error) {
     console.error('음식 로그 삭제 예외:', error)
     return { 
@@ -196,17 +196,16 @@ export async function getDailyCalorySummary(
 ): Promise<{ success: boolean; data?: { totalCalories: number; mealBreakdown: Record<string, number> }; error?: string }> {
   try {
     const db = getDatabase()
+    const startOfDay = `${date}T00:00:00.000Z`
+    const endOfDay = `${date}T23:59:59.999Z`
     
-    const stmt = db.prepare(`
+    const rows = db.prepare(`
       SELECT meal_type, total_calories 
       FROM food_logs 
-      WHERE user_id = ? AND date(created_at) = ?
-    `)
-    
-    const rows = stmt.all(userId, date) as {
-      meal_type: string
-      total_calories: number
-    }[]
+      WHERE user_id = ? 
+        AND created_at >= ? 
+        AND created_at <= ?
+    `).all(userId, startOfDay, endOfDay) as { meal_type: string; total_calories: number }[]
 
     const totalCalories = rows.reduce((sum, log) => sum + log.total_calories, 0)
     const mealBreakdown = rows.reduce((acc, log) => {

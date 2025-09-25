@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     console.log('수신된 데이터:', JSON.stringify(body, null, 2))
 
     // 필수 데이터 검증
-    if (!body.userId || !body.data) {
+    if (!body.userId || !body.analysisResult) {
       return NextResponse.json(
         { 
           success: false, 
@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { userId, data } = body
+    const { userId, analysisResult: data } = body
 
     // 분석 결과 데이터 검증
-    if (!data.items || !data.summary || !data.imageUrl) {
+    if (!data.items || !data.summary) {
       return NextResponse.json(
         { 
           success: false, 
@@ -76,14 +76,21 @@ export async function POST(request: NextRequest) {
 
     console.log('분석 결과 저장 완료:', saveResult.data?.id)
 
-    // SSE를 통해 프론트엔드에 완료 알림
+    // SSE를 통해 프론트엔드에 완료 알림 (전체 분석 결과 포함)
     const sseMessage = {
       type: 'analysis_complete',
       data: {
         logId: saveResult.data?.id,
         totalCalories: data.summary.totalCalories,
         itemCount: data.items.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // 전체 분석 결과 추가
+        analysisResult: {
+          items: data.items,
+          summary: data.summary,
+          mealType,
+          imageUrl: data.imageUrl
+        }
       }
     }
     

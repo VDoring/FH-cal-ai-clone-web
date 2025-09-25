@@ -14,14 +14,17 @@ import Image from 'next/image'
 
 export default function UploadPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
   
   // n8n 웹훅 연동을 위한 훅 사용
-  const { loading, error, progress, stage, processImage, reset: resetUpload } = useImageUpload()
+  const { loading, error, progress, stage, result, processImage, reset: resetUpload } = useImageUpload()
+
+  // 사용자 로그인 상태 디버깅
+  console.log('🔍 인증 상태 - 로딩:', authLoading, '사용자:', user)
 
   // 파일 선택 핸들러
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,15 +44,32 @@ export default function UploadPage() {
 
   // n8n 웹훅을 통한 업로드 처리
   const handleUpload = async () => {
-    if (!selectedFile || !user) return
+    console.log('🔄 업로드 버튼 클릭됨')
+    console.log('📁 선택된 파일:', selectedFile)
+    console.log('👤 사용자 정보:', user)
+    
+    if (!selectedFile) {
+      console.error('❌ 선택된 파일이 없습니다')
+      return
+    }
+    
+    if (!user) {
+      console.error('❌ 사용자가 로그인되지 않았습니다')
+      return
+    }
 
+    console.log('🚀 이미지 분석 시작')
     const analysisResult = await processImage(selectedFile)
+    console.log('📊 분석 결과:', analysisResult)
     
     if (analysisResult) {
+      console.log('✅ 분석 완료, 2초 후 대시보드로 이동')
       // 분석이 완료되면 2초 후 대시보드로 이동
       setTimeout(() => {
         router.push('/dashboard')
       }, 2000)
+    } else {
+      console.error('❌ 분석 결과가 없습니다')
     }
   }
 
@@ -61,6 +81,41 @@ export default function UploadPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  // 인증 로딩 중일 때
+  if (authLoading) {
+    return (
+      <MobileLayout showPadding={false}>
+        <Header title="식단 기록하기" showBack />
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loading size="lg" />
+          <span className="ml-3 text-gray-600">사용자 정보 로딩 중...</span>
+        </div>
+      </MobileLayout>
+    )
+  }
+
+  // 사용자가 없을 때 (디버깅용)
+  if (!user) {
+    return (
+      <MobileLayout showPadding={false}>
+        <Header title="식단 기록하기" showBack />
+        <div className="p-4 space-y-6">
+          <div className="text-center space-y-4">
+            <div className="text-red-600">
+              ⚠️ 사용자 로그인이 필요합니다
+            </div>
+            <div className="text-sm text-gray-600">
+              사용자 정보를 불러올 수 없습니다. 페이지를 새로고침하거나 홈페이지로 이동해주세요.
+            </div>
+            <Button onClick={() => router.push('/')} className="w-full">
+              홈으로 이동
+            </Button>
+          </div>
+        </div>
+      </MobileLayout>
+    )
   }
 
   return (
@@ -171,9 +226,21 @@ export default function UploadPage() {
                       <p className="text-sm text-gray-600">
                         {progress > 0 && `${progress}% 완료`}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        잠시만 기다려주세요...
-                      </p>
+                      <div className="text-xs text-gray-500 space-y-1">
+                        {progress < 50 ? (
+                          <>
+                            <p>🔍 이미지에서 음식을 인식 중...</p>
+                            <p>⏳ 분석이 시작되었습니다...</p>
+                          </>
+                        ) : (
+                          <>
+                            <p>🤖 AI가 상세한 영양성분을 계산 중...</p>
+                            <p>🧮 칼로리와 영양 정보를 분석 중...</p>
+                            <p>⏰ 복잡한 이미지의 경우 최대 3분까지 소요될 수 있습니다</p>
+                          </>
+                        )}
+                        <p className="text-blue-600">잠시만 기다려주세요...</p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -181,11 +248,32 @@ export default function UploadPage() {
                 {stage === 'complete' && (
                   <div className="text-center space-y-4">
                     <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <h3 className="font-medium text-gray-900">분석 완료!</h3>
+                      
+                      {/* 분석 결과 요약 */}
+                      {result && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+                          <div className="text-lg font-semibold text-green-800">
+                            🍽️ {result.summary.totalCalories}kcal
+                          </div>
+                          {result.items && result.items.length > 0 && (
+                            <div className="text-sm text-green-700">
+                              <p className="font-medium">{result.items[0].foodName}</p>
+                              <p>{result.items[0].quantity} • 신뢰도 {Math.round(result.items[0].confidence * 100)}%</p>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-3 gap-2 text-xs text-green-600 pt-2">
+                            <div>탄수화물<br/>{result.summary.totalCarbohydrates?.value || 0}g</div>
+                            <div>단백질<br/>{result.summary.totalProtein?.value || 0}g</div>
+                            <div>지방<br/>{result.summary.totalFat?.value || 0}g</div>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="text-sm text-gray-600 space-y-1">
-                        <p>음식 분석이 완료되었습니다.</p>
-                        <p>대시보드로 이동합니다...</p>
+                        <p>음식 분석이 완료되었습니다!</p>
+                        <p>2초 후 대시보드로 이동합니다...</p>
                       </div>
                     </div>
                   </div>

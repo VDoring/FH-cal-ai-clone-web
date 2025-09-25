@@ -1,16 +1,16 @@
 -- Supabase 데이터베이스 스키마
 -- 이 스키마를 Supabase 대시보드의 SQL Editor에서 실행하세요
 
--- food_logs 테이블 생성
+-- food_logs 테이블 생성 (image_url nullable로 변경)
 CREATE TABLE food_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  image_url TEXT NOT NULL,
+  image_url TEXT NULL,
   meal_type TEXT NOT NULL CHECK (meal_type IN ('breakfast', 'lunch', 'dinner', 'snack')),
   food_items JSONB NOT NULL DEFAULT '[]',
-  total_calories INTEGER DEFAULT 0,
-  total_nutrients JSONB DEFAULT '{}',
-  confidence_score DECIMAL(3,2) DEFAULT 0.0,
+  total_calories INTEGER NOT NULL DEFAULT 0,
+  total_nutrients JSONB NOT NULL DEFAULT '{}',
+  confidence_score DECIMAL(5,4) NOT NULL DEFAULT 0.0000 CHECK (confidence_score >= 0 AND confidence_score <= 1),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

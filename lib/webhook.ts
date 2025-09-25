@@ -46,6 +46,7 @@ export async function analyzeFood(file: File, userId: string): Promise<WebhookRe
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      console.error('API 응답 오류:', response.status, errorData)
       throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`)
     }
 
@@ -66,11 +67,23 @@ export async function analyzeFood(file: File, userId: string): Promise<WebhookRe
       }
     }
 
+    // 더 구체적인 에러 메시지 제공
+    let errorMessage = '음식 분석 중 오류가 발생했습니다.'
+    if (error instanceof Error) {
+      if (error.message.includes('404')) {
+        errorMessage = 'AI 분석 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.'
+      } else if (error.message.includes('timeout')) {
+        errorMessage = '분석 시간이 초과되었습니다. 더 작은 이미지로 다시 시도해주세요.'
+      } else {
+        errorMessage = error.message
+      }
+    }
+
     return {
       success: false,
       error: {
         code: 'ANALYSIS_ERROR',
-        message: error instanceof Error ? error.message : '음식 분석 중 오류가 발생했습니다.'
+        message: errorMessage
       }
     }
   }

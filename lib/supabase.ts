@@ -9,7 +9,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface FoodLog {
   id: string
   user_id: string
-  image_url: string
+  image_url: string | null
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   food_items: FoodItem[]
   total_calories: number
