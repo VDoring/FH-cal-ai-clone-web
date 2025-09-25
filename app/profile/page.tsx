@@ -5,10 +5,10 @@ import { MobileLayout } from '@/components/layout/mobile-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { User, Settings, HelpCircle, LogOut } from 'lucide-react'
-import { useAuth } from '@/components/auth-provider'
+import { useDemoAuth as useAuth } from '@/components/demo-auth-provider'
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, signOut } = useAuth()
 
   return (
     <MobileLayout showPadding={false}>
@@ -23,8 +23,10 @@ export default function ProfilePage() {
                 <User className="w-8 h-8 text-emerald-500" />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900">{user?.name}</h2>
-                <p className="text-gray-600">@{user?.username}</p>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {user?.email?.includes('anonymous') ? '익명 사용자' : (user?.email || '사용자')}
+                </h2>
+                <p className="text-gray-600">{user?.email || '익명 사용자'}</p>
                 <div className="mt-2 text-sm text-gray-500">
                   🎯 목표 칼로리: 2,000kcal/일
                 </div>
@@ -63,21 +65,26 @@ export default function ProfilePage() {
               <HelpCircle className="w-5 h-5 mr-3" />
               도움말
             </Button>
-            <Button variant="ghost" className="w-full justify-start h-14 text-red-600">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start h-14 text-red-600"
+              onClick={signOut}
+            >
               <LogOut className="w-5 h-5 mr-3" />
               로그아웃
             </Button>
           </CardContent>
         </Card>
 
-        {/* 임시 안내 */}
+        {/* 사용자 정보 */}
         <Card>
           <CardContent className="p-4">
             <div className="text-center text-sm text-gray-600">
-              <div className="mb-2">🚧 <strong>데모 버전</strong></div>
+              <div className="mb-2">👤 <strong>사용자 정보 (데모 모드)</strong></div>
               <p>
-                현재 로그인 기능이 bypass되어 있습니다.<br />
-                실제 사용자 데이터는 아직 연동되지 않았습니다.
+                사용자 ID: {user?.id?.substring(0, 8)}...<br />
+                가입일: {user?.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : 'N/A'}<br />
+                <span className="text-blue-600 font-medium">로컬 스토리지 기반 인증</span>
               </p>
             </div>
           </CardContent>

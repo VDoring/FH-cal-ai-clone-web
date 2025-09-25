@@ -1,20 +1,16 @@
 'use client'
 
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
-import { fetchUser, createUser } from '@/lib/api-client'
-
-// 클라이언트용 사용자 타입 정의
-interface User {
-  id: string
-  username: string
-  name: string
-}
+import { supabase } from '@/lib/supabase'
+import type { User } from '@supabase/supabase-js'
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (username: string) => Promise<void>
-  logout: () => void
+  signInAnonymously: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
+  signUpWithEmail: (email: string, password: string) => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -27,56 +23,95 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // 컴포넌트 마운트 시 기본 사용자 생성/로그인
+  // 인증 상태 변화 감지
   useEffect(() => {
-    const initUser = async () => {
-      setIsLoading(true)
-      try {
-        const result = await fetchUser()
-        if (result.success && result.data) {
-          setUser({
-            id: result.data.id,
-            username: result.data.username,
-            name: result.data.full_name || result.data.username
-          })
-        }
-      } catch (error) {
-        console.error('사용자 초기화 오류:', error)
-      } finally {
+    // 현재 세션 확인
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('세션 확인 오류:', error)
+      }
+      
+      setUser(session?.user ?? null)
+      setIsLoading(false)
+    })
+
+    // 인증 상태 변화 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('인증 상태 변화:', event, session?.user?.id)
+        setUser(session?.user ?? null)
         setIsLoading(false)
       }
-    }
+    )
 
-    initUser()
+    return () => subscription.unsubscribe()
   }, [])
 
-  const login = async (username: string) => {
+  const signInAnonymously = async () => {
     setIsLoading(true)
     try {
-      const result = await createUser(username, username)
-      if (result.success && result.data) {
-        setUser({
-          id: result.data.id,
-          username: result.data.username,
-          name: result.data.full_name || result.data.username
-        })
-      }
+      const { data, error } = await supabase.auth.signInAnonymously()
+      if (error) throw error
+      console.log('익명 로그인 성공:', data.user?.id)
     } catch (error) {
-      console.error('로그인 오류:', error)
+      console.error('익명 로그인 오류:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const logout = () => {
-    setUser(null)
+  const signInWithEmail = async (email: string, password: string) => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      if (error) throw error
+      console.log('이메일 로그인 성공:', data.user?.id)
+    } catch (error) {
+      console.error('이메일 로그인 오류:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password
+      })
+      if (error) throw error
+      console.log('회원가입 성공:', data.user?.id)
+    } catch (error) {
+      console.error('회원가입 오류:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const signOut = async () => {
+    setIsLoading(true)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      console.log('로그아웃 성공')
+    } catch (error) {
+      console.error('로그아웃 오류:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const value = {
     user,
     isLoading,
-    login,
-    logout
+    signInAnonymously,
+    signInWithEmail,
+    signUpWithEmail,
+    signOut
   }
 
   return (

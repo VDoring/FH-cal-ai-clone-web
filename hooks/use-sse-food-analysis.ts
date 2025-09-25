@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@/components/auth-provider'
+import { useDemoAuth as useAuth } from '@/components/demo-auth-provider'
 
 interface SSEMessage {
   type: 'connected' | 'analysis_complete' | 'error'

@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:supabase": "node scripts/test-supabase-connection.js",
+    "debug:auth": "node scripts/debug-auth.js"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { AuthProvider } from '@/components/auth-provider'
-import { BottomNav } from '@/components/layout/bottom-nav'
+import { DemoAuthProvider as AuthProvider } from '@/components/demo-auth-provider'
+import { AppContent } from '@/components/app-content'
 import "./globals.css";
 
 const inter = Inter({ subsets: ['latin'] })
@@ -20,10 +20,9 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <AuthProvider>
-          <div className="pb-16"> {/* 바텀 네비게이션 공간 확보 */}
+          <AppContent>
             {children}
-          </div>
-          <BottomNav />
+          </AppContent>
         </AuthProvider>
       </body>
     </html>

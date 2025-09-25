@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { analyzeWithRetry } from '@/lib/webhook'
-import { useAuth } from '@/components/auth-provider'
+import { useDemoAuth as useAuth } from '@/components/demo-auth-provider'
 import { useSSEFoodAnalysis } from './use-sse-food-analysis'
 import type { WebhookResponse } from '@/lib/webhook'
 

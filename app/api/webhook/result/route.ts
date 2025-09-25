@@ -51,9 +51,29 @@ export async function POST(request: NextRequest) {
       else mealType = 'snack'
     }
 
-    // 데이터베이스에 저장
+    // userId 처리: n8n에서 전달되는 사용자 ID를 Supabase 브릿지 계정으로 매핑
+    let actualUserId = userId
+    
+    // userId가 UUID 형식이 아닌 경우 (예: user_1758765225587_4kf14)
+    // 데모 사용자를 위한 브릿지 Supabase 계정으로 매핑
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)
+    
+    if (!isValidUUID) {
+      console.log(`비UUID 형식의 userId 감지: ${userId}`)
+      console.log('데모 사용자의 데이터를 Supabase 브릿지 계정으로 매핑합니다.')
+      
+      // testuser@gmail.com (데모 계정)을 위한 브릿지 Supabase 계정 UUID
+      actualUserId = '22222222-2222-2222-2222-222222222222'
+      console.log(`브릿지 Supabase userId로 매핑: ${actualUserId}`)
+      console.log(`원본 userId: ${userId} → 매핑된 UUID: ${actualUserId}`)
+    } else {
+      console.log(`유효한 UUID 형식의 userId: ${userId}`)
+    }
+
+    // 모든 음식 로그를 Supabase에 저장
+    console.log('Supabase에 음식 로그 저장 중...')
     const saveResult = await saveFoodLog({
-      userId,
+      userId: actualUserId,
       imageUrl: data.imageUrl,
       mealType,
       items: data.items,
@@ -76,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     console.log('분석 결과 저장 완료:', saveResult.data?.id)
 
-    // SSE를 통해 프론트엔드에 완료 알림 (전체 분석 결과 포함)
+    // SSE를 통해 프론트엔드에 완료 알림 (원래 userId로 전송)
     const sseMessage = {
       type: 'analysis_complete',
       data: {
@@ -94,6 +114,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // SSE는 원래 userId로 전송 (프론트엔드에서 연결된 ID)
     const sseSent = sendSSEMessage(userId, sseMessage)
     console.log(`SSE 알림 전송: userId=${userId}, 성공=${sseSent}`)
 
