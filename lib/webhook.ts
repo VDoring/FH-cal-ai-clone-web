@@ -34,8 +34,10 @@ interface FoodItem {
 export async function analyzeFood(file: File, userId: string): Promise<WebhookResponse> {
   try {
     const formData = new FormData()
-    formData.append('image', file)
+    formData.append('image', file, file.name) // 파일명 포함
     formData.append('userId', userId)
+    formData.append('filename', file.name) // 파일명 별도 필드
+    formData.append('fileType', file.type) // 파일 타입 (예: image/jpeg, image/png)
 
     console.log('음식 분석 시작:', file.name, 'User:', userId)
 

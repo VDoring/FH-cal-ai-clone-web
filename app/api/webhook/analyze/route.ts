@@ -25,9 +25,11 @@ export async function POST(request: NextRequest) {
 
     // n8n 웹훅으로 전송할 FormData 생성
     const n8nFormData = new FormData()
-    n8nFormData.append('image', image)
+    n8nFormData.append('image', image, image.name) // 파일명 포함
     n8nFormData.append('userId', userId)
     n8nFormData.append('timestamp', new Date().toISOString())
+    n8nFormData.append('filename', image.name) // 파일명 별도 필드
+    n8nFormData.append('fileType', image.type) // 파일 타입 (예: image/jpeg, image/png)
     
     // 결과 수신을 위한 콜백 URL 추가
     const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhook/result`
