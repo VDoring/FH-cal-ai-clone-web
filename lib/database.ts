@@ -73,7 +73,7 @@ function initializeDatabase(database: Database.Database) {
         INSERT OR IGNORE INTO food_logs_backup 
         SELECT * FROM food_logs
       `)
-    } catch (e) {
+    } catch {
       // 테이블이 없으면 무시
     }
     
@@ -104,7 +104,7 @@ function initializeDatabase(database: Database.Database) {
         SELECT * FROM food_logs_backup 
         WHERE id IS NOT NULL AND user_id IS NOT NULL
       `)
-    } catch (e) {
+    } catch {
       // 백업 데이터가 없거나 복원 실패 시 무시
     }
     

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useDemoAuth as useAuth } from '@/components/demo-auth-provider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,10 +22,10 @@ export function FoodAnalysisResult({ onComplete, showLatest = false }: FoodAnaly
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   
   // SSE를 통한 실시간 분석 결과 수신
-  const { isConnected, isAnalysisComplete, analysisResult, connect, disconnect, reset } = useSSEFoodAnalysis()
+  const { isAnalysisComplete, analysisResult, connect, disconnect } = useSSEFoodAnalysis()
 
   // 최신 분석 결과 조회
-  const fetchLatestResult = async () => {
+  const fetchLatestResult = useCallback(async () => {
     if (!user) return
 
     setIsLoading(true)
@@ -63,7 +63,7 @@ export function FoodAnalysisResult({ onComplete, showLatest = false }: FoodAnaly
       setIsLoading(false)
     }
     return false
-  }
+  }, [user, onComplete])
 
   // 컴포넌트 마운트 시 즉시 최신 결과 조회 및 폴링
   useEffect(() => {
@@ -111,7 +111,7 @@ export function FoodAnalysisResult({ onComplete, showLatest = false }: FoodAnaly
       }
       disconnect()
     }
-  }, [showLatest, user])
+  }, [showLatest, user, onComplete, fetchLatestResult, connect, disconnect])
 
   // 분석 완료 시 최신 결과 조회 (SSE 백업)
   useEffect(() => {
@@ -123,7 +123,7 @@ export function FoodAnalysisResult({ onComplete, showLatest = false }: FoodAnaly
         }
       })
     }
-  }, [isAnalysisComplete, analysisResult])
+  }, [isAnalysisComplete, analysisResult, fetchLatestResult, onComplete])
 
   // 아이템 확장/축소 토글
   const toggleItemExpansion = (itemName: string) => {

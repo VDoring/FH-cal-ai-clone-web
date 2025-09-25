@@ -10,7 +10,7 @@ export async function getCurrentUser(): Promise<{ success: boolean; data?: User;
       return { success: false, error: error.message }
     }
     
-    return { success: true, data: user }
+    return { success: true, data: user || undefined }
   } catch (error) {
     console.error('사용자 정보 조회 오류:', error)
     return {
@@ -29,7 +29,7 @@ export async function signInAnonymously(): Promise<{ success: boolean; data?: Us
       return { success: false, error: error.message }
     }
     
-    return { success: true, data: data.user }
+    return { success: true, data: data.user || undefined }
   } catch (error) {
     console.error('익명 로그인 오류:', error)
     return {
@@ -51,7 +51,7 @@ export async function signUpWithEmail(email: string, password: string): Promise<
       return { success: false, error: error.message }
     }
     
-    return { success: true, data: data.user }
+    return { success: true, data: data.user || undefined }
   } catch (error) {
     console.error('회원가입 오류:', error)
     return {
@@ -73,7 +73,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
       return { success: false, error: error.message }
     }
     
-    return { success: true, data: data.user }
+    return { success: true, data: data.user || undefined }
   } catch (error) {
     console.error('로그인 오류:', error)
     return {
@@ -106,7 +106,7 @@ export async function signOut(): Promise<{ success: boolean; error?: string }> {
 export async function updateUserMetadata(updates: { 
   full_name?: string 
   avatar_url?: string 
-  [key: string]: any 
+  [key: string]: unknown 
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase.auth.updateUser({

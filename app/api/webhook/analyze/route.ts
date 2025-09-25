@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { saveFoodLog } from '@/lib/food-logs'
 import { sendSSEMessage } from '@/app/api/sse/food-analysis/route'
 
 // Route Handler의 최대 실행 시간을 30초로 설정 (즉시 응답용)

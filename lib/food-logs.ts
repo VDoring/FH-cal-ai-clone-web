@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin, type FoodLog, type FoodItem } from './supabase'
+import { supabaseAdmin, type FoodLog, type FoodItem } from './supabase'
 
 // 음식 분석 결과를 데이터베이스에 저장
 export async function saveFoodLog(data: {

@@ -12,11 +12,11 @@ export function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
-  const [error, setError] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setErrorMsg('')
 
     try {
       if (isSignUp) {
@@ -25,16 +25,16 @@ export function LoginForm() {
         await signInWithEmail(email, password)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : '로그인에 실패했습니다.')
+      setErrorMsg(error instanceof Error ? error.message : '로그인에 실패했습니다.')
     }
   }
 
   const handleAnonymousLogin = async () => {
-    setError('')
+    setErrorMsg('')
     try {
       await signInAnonymously()
-    } catch (error) {
-      setError('익명 로그인에 실패했습니다. 이메일로 로그인해주세요.')
+    } catch {
+      setErrorMsg('익명 로그인에 실패했습니다. 이메일로 로그인해주세요.')
     }
   }
 
@@ -74,9 +74,9 @@ export function LoginForm() {
                 minLength={8}
               />
             </div>
-            {error && (
+            {errorMsg && (
               <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                {error}
+                {errorMsg}
               </div>
             )}
             <Button 

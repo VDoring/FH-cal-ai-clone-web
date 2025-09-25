@@ -34,7 +34,7 @@ export function DemoAuthProvider({ children }: DemoAuthProviderProps) {
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser))
-      } catch (error) {
+      } catch {
         localStorage.removeItem('demo_user')
       }
     }
